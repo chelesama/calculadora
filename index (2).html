@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Prestaciones Laborales - El Salvador</title>
+  <!-- Librerías oficiales para generación de PDF nativo y tablas vectoriales -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Poppins', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f4c81 0%, #1b7a5a 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #222;
+    }
+
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      padding: 30px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #0f4c81;
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 0.95rem;
+      margin-bottom: 25px;
+    }
+
+    fieldset {
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      background: #fafafa;
+    }
+
+    legend {
+      font-weight: 600;
+      color: #0f4c81;
+      padding: 0 8px;
+      font-size: 1.05rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #444;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select {
+      margin-top: 5px;
+      padding: 9px 12px;
+      border: 1.5px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #0f4c81;
+    }
+
+    input[readonly] {
+      background: #eef2f7;
+      color: #0f4c81;
+      font-weight: 600;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .radio-group label {
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+      font-weight: 400;
+    }
+
+    .checkbox-line {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-weight: 600;
+      color: #0f4c81;
+    }
+
+    .checkbox-line input { margin: 0; }
+
+    .optional-hint {
+      font-size: 0.8rem;
+      color: #888;
+      font-weight: 400;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #0f4c81, #1b7a5a);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(15,76,129,0.35);
+    }
+
+    .btn-pdf {
+      background: #2b6cb0;
+      margin-top: 15px;
+    }
+
+    .btn-pdf:hover {
+      background: #2c5282;
+    }
+
+    .results {
+      margin-top: 25px;
+      border-top: 2px dashed #e0e0e0;
+      padding-top: 20px;
+      display: none;
+    }
+
+    .results h2 {
+      color: #0f4c81;
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.98rem;
+    }
+
+    .detail-hint {
+      display: block;
+      font-size: 0.78rem;
+      color: #666;
+      font-weight: normal;
+      margin-top: 2px;
+    }
+
+    .result-row.subtotal {
+      font-weight: 700;
+      color: #1b7a5a;
+      background: #f4faf6;
+      padding: 10px 8px;
+      border-radius: 6px;
+    }
+
+    .result-row.deduction {
+      color: #c53030;
+    }
+
+    .result-row.total {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #0f4c81;
+      border-bottom: none;
+      border-top: 2px solid #0f4c81;
+      margin-top: 8px;
+      padding-top: 14px;
+    }
+
+    .result-row .amount { font-weight: 600; }
+
+    .warning {
+      background: #fff8e1;
+      border-left: 4px solid #f0ad4e;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #7a5c00;
+      margin-top: 12px;
+    }
+
+    .warning.hidden { display: none; }
+
+    @media (max-width: 600px) {
+      .container { padding: 18px; }
+      h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora de Prestaciones Laborales</h1>
+    <p class="subtitle">República de El Salvador · Código de Trabajo (Decreto N° 15, 1972)</p>
+
+    <!-- Datos opcionales -->
+    <fieldset>
+      <legend>Datos de identificación <span class="optional-hint">(opcionales)</span></legend>
+      <div class="grid">
+        <label>Nombre de la persona trabajadora
+          <input type="text" id="nombreTrabajador" placeholder="Ej. Roberto Aguilar (o anónimo)">
+        </label>
+        <label>Cargo desempeñado
+          <input type="text" id="cargo" placeholder="Ej. Ingeniero de Software">
+        </label>
+        <label>DUI
+          <input type="text" id="dui" placeholder="00000000-0" maxlength="10">
+        </label>
+        <label>Patrono / Empresa
+          <input type="text" id="patrono" placeholder="Ej. Mi Empresa S.A. de C.V.">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Bloque 1: Datos generales con calendario y sincronización de fecha actual -->
+    <fieldset>
+      <legend>1. Datos generales y financieros</legend>
+      <div class="grid">
+        <label>Fecha de ingreso
+          <input type="date" id="fechaIngreso" required>
+        </label>
+        <label>Fecha de terminación
+          <input type="date" id="fechaTerminacion" required>
+        </label>
+        <label>Salario mensual (USD) <span class="optional-hint">(Mínimo legal $408.80)</span>
+          <input type="number" id="salario" min="408.80" step="0.01" placeholder="Mínimo 408.80" required>
+        </label>
+      </div>
+      <div class="grid" style="margin-top:12px;">
+        <label>Fecha de últimas vacaciones <span class="optional-hint">(opcional, si ya gozó alguna)</span>
+          <input type="date" id="fechaUltimaVacacion">
+        </label>
+        <label>¿Ya se le canceló el aguinaldo de este período?
+          <select id="aguinaldoPagado">
+            <option value="no" selected>No (Pendiente de pago)</option>
+            <option value="si">Sí (Ya fue cancelado)</option>
+          </select>
+        </label>
+        <label>Antigüedad (calculada automáticamente)
+          <input type="text" id="antiguedad" readonly placeholder="—">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Bloque 2: Causa de finalización -->
+    <fieldset>
+      <legend>2. Causa de finalización de la relación laboral</legend>
+      <div class="radio-group">
+        <label><input type="radio" name="tipo" value="despido" checked> Despido injustificado</label>
+        <label><input type="radio" name="tipo" value="renuncia"> Renuncia voluntaria</label>
+      </div>
+      <!-- Desbloqueado exclusivamente al marcar renuncia -->
+      <div class="grid" style="margin-top:15px; display: none;" id="boxAviso">
+        <label>¿Dio aviso de renuncia? <span class="optional-hint">(solo renuncia)</span>
+          <select id="aviso">
+            <option value="si">Sí</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Bloque 3: Jornadas extraordinarias y días especiales -->
+    <fieldset>
+      <legend>3. Jornadas Extraordinarias y Días Especiales</legend>
+      <label class="checkbox-line">
+        <input type="checkbox" id="noAplica">
+        No aplica (no hubo horas extras ni días especiales)
+      </label>
+      <div id="jornadas">
+        <div class="grid">
+          <label>Horas extras diurnas
+            <input type="number" id="hed" min="0" step="0.5" value="0">
+          </label>
+          <label>Horas extras nocturnas (7:00 p.m. – 6:00 a.m.)
+            <input type="number" id="hen" min="0" step="0.5" value="0">
+          </label>
+          <label>Días de asueto laborados
+            <input type="number" id="asueto" min="0" step="1" value="0">
+          </label>
+          <label>Días de descanso semanal laborados
+            <input type="number" id="descanso" min="0" step="1" value="0">
+          </label>
+        </div>
+        <div class="grid" style="margin-top:15px;">
+          <label class="checkbox-line"><input type="checkbox" id="alojamiento"> Patrono brinda alojamiento (+25% en vacaciones)</label>
+          <label class="checkbox-line"><input type="checkbox" id="comida"> Patrono brinda alimentación (+25% en vacaciones)</label>
+        </div>
+      </div>
+    </fieldset>
+
+    <button class="btn" onclick="calcular()">Calcular Liquidación</button>
+
+    <!-- Panel de resultados -->
+    <div class="results" id="resultados">
+      <h2>Desglose de Prestaciones Devengadas</h2>
+      <div class="result-row">
+        <span>Vacación proporcional</span>
+        <span class="amount" id="resVacacion">$0.00</span>
+      </div>
+      <div class="result-row">
+        <span>
+          Aguinaldo proporcional
+          <span class="detail-hint" id="detalleAguinaldoTexto">Base: —</span>
+        </span>
+        <span class="amount" id="resAguinaldo">$0.00</span>
+      </div>
+      <div class="result-row">
+        <span>Indemnización / compensación</span>
+        <span class="amount" id="resIndemnizacion">$0.00</span>
+      </div>
+      <div class="result-row"><span>Subtotal horas extras diurnas</span><span class="amount" id="resHED">$0.00</span></div>
+      <div class="result-row"><span>Subtotal horas extras nocturnas</span><span class="amount" id="resHEN">$0.00</span></div>
+      <div class="result-row"><span>Días de asueto laborados</span><span class="amount" id="resAsueto">$0.00</span></div>
+      <div class="result-row"><span>Días de descanso semanal laborados</span><span class="amount" id="resDescanso">$0.00</span></div>
+
+      <div class="result-row subtotal"><span>TOTAL DEVENGADO (BRUTO)</span><span class="amount" id="resTotalBruto">$0.00</span></div>
+
+      <h2 style="margin-top: 20px; font-size: 1.15rem; color: #c53030;">Deducciones de Ley</h2>
+      <div class="result-row deduction"><span>Cotización ISSS (3%, sobre salario nominal)</span><span class="amount" id="resISSS">-$0.00</span></div>
+      <div class="result-row deduction"><span>Cotización AFP (7.25%, sobre salario nominal)</span><span class="amount" id="resAFP">-$0.00</span></div>
+      <div class="result-row deduction"><span>Retención de ISR</span><span class="amount" id="resISR">-$0.00</span></div>
+      <div class="result-row deduction" style="font-weight: 600;"><span>Total de deducciones</span><span class="amount" id="resTotalDeducciones">-$0.00</span></div>
+
+      <div class="result-row total"><span>MONTO NETO A PAGAR</span><span class="amount" id="resTotalNeto">$0.00</span></div>
+
+      <div class="warning hidden" id="avisoMsg"></div>
+
+      <button class="btn btn-pdf" onclick="descargarPDFDirecto()">Descargar Comprobante en PDF</button>
+    </div>
+  </div>
+
+  <script>
+    const SALARIO_MINIMO_SECTOR = 408.80;
+    let datosCalculados = null;
+
+    // Sincronización del límite de fecha con el día actual (bloqueo de fechas futuras)
+    function sincronizarFechasMaximas() {
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      const fechaHoy = `${yyyy}-${mm}-${dd}`;
+
+      document.getElementById('fechaIngreso').max = fechaHoy;
+      document.getElementById('fechaTerminacion').max = fechaHoy;
+      document.getElementById('fechaUltimaVacacion').max = fechaHoy;
+    }
+    sincronizarFechasMaximas();
+
+    function capSalario(salarioMensual) {
+      const tope = SALARIO_MINIMO_SECTOR * 4;
+      return Math.min(salarioMensual, tope);
+    }
+
+    function fmt(n) {
+      return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function formatearFechaDMY(fechaStr) {
+      if (!fechaStr) return '—';
+      const partes = fechaStr.split('-');
+      if (partes.length !== 3) return fechaStr;
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    // Parseo en tiempo local para evitar desfase de zona horaria UTC-6
+    function parsearFechaLocal(fechaStr) {
+      if (!fechaStr) return null;
+      const partes = fechaStr.split('-').map(Number);
+      if (partes.length !== 3) return null;
+      return new Date(partes[0], partes[1] - 1, partes[2]);
+    }
+
+    // Activar o desactivar aviso de renuncia según causa
+    document.querySelectorAll('input[name="tipo"]').forEach(radio => {
+      radio.addEventListener('change', function() {
+        const boxAviso = document.getElementById('boxAviso');
+        if (this.value === 'renuncia') {
+          boxAviso.style.display = 'grid';
+        } else {
+          boxAviso.style.display = 'none';
+        }
+      });
+    });
+
+    function calcularAntiguedad() {
+      const fIngreso = document.getElementById('fechaIngreso').value;
+      const fTerminacion = document.getElementById('fechaTerminacion').value;
+      if (!fIngreso || !fTerminacion) return null;
+
+      const ingreso = parsearFechaLocal(fIngreso);
+      const terminacion = parsearFechaLocal(fTerminacion);
+
+      if (!ingreso || !terminacion || terminacion < ingreso) {
+        document.getElementById('antiguedad').value = 'Fechas inválidas';
+        return null;
+      }
+
+      let anios = terminacion.getFullYear() - ingreso.getFullYear();
+      let meses = terminacion.getMonth() - ingreso.getMonth();
+      let dias = terminacion.getDate() - ingreso.getDate();
+
+      if (dias < 0) {
+        meses--;
+        dias += new Date(terminacion.getFullYear(), terminacion.getMonth(), 0).getDate();
+      }
+      if (meses < 0) {
+        anios--;
+        meses += 12;
+      }
+
+      document.getElementById('antiguedad').value =
+        anios + ' años, ' + meses + ' meses, ' + dias + ' días';
+      return { anios, meses, dias };
+    }
+
+    function calcular() {
+      const salarioInput = document.getElementById('salario');
+      const salario = parseFloat(salarioInput.value) || 0;
+
+      if (salario < SALARIO_MINIMO_SECTOR) {
+        alert('El salario mensual ingresado no puede ser menor al salario mínimo legal vigente ($' + SALARIO_MINIMO_SECTOR.toFixed(2) + ').');
+        salarioInput.focus();
+        return;
+      }
+
+      const fIngresoStr = document.getElementById('fechaIngreso').value;
+      const fTerminacionStr = document.getElementById('fechaTerminacion').value;
+      const hoyLocal = new Date();
+      hoyLocal.setHours(23, 59, 59, 999);
+
+      const dIngreso = parsearFechaLocal(fIngresoStr);
+      const dTerminacion = parsearFechaLocal(fTerminacionStr);
+
+      if (dIngreso > hoyLocal || dTerminacion > hoyLocal) {
+        alert('Las fechas ingresadas no pueden ser futuras a la fecha actual.');
+        return;
+      }
+
+      const ant = calcularAntiguedad();
+      if (!ant) {
+        const avisoEl = document.getElementById('avisoMsg');
+        avisoEl.textContent = '⚠ Verifica las fechas de ingreso y terminación (la terminación no puede ser anterior al ingreso).';
+        avisoEl.classList.remove('hidden');
+        document.getElementById('resultados').style.display = 'block';
+        return;
+      }
+
+      const anios = ant.anios;
+      const meses = ant.meses;
+      const dias = ant.dias;
+      const tipo = document.querySelector('input[name="tipo"]:checked').value;
+      const aviso = document.getElementById('aviso').value;
+      const aguinaldoPagado = document.getElementById('aguinaldoPagado').value;
+
+      const noAplica = document.getElementById('noAplica').checked;
+      const hed = noAplica ? 0 : parseFloat(document.getElementById('hed').value) || 0;
+      const hen = noAplica ? 0 : parseFloat(document.getElementById('hen').value) || 0;
+      const asueto = noAplica ? 0 : parseFloat(document.getElementById('asueto').value) || 0;
+      const descanso = noAplica ? 0 : parseFloat(document.getElementById('descanso').value) || 0;
+
+      const sbd = salario / 30;
+      const sbdCap = capSalario(salario) / 30;
+      const totalMeses = anios * 12 + meses + (dias / 30);
+
+      // --- 1. Vacación proporcional (Arts. 177 y 190 CT) ---
+      let mesesVacacion = totalMeses;
+      const fUltimaVac = document.getElementById('fechaUltimaVacacion').value;
+      if (fUltimaVac) {
+        const ultimaVac = parsearFechaLocal(fUltimaVac);
+        const terminacion = parsearFechaLocal(fTerminacionStr);
+        if (ultimaVac && terminacion && terminacion >= ultimaVac) {
+          let mV = (terminacion.getFullYear() - ultimaVac.getFullYear()) * 12 + (terminacion.getMonth() - ultimaVac.getMonth());
+          let dV = terminacion.getDate() - ultimaVac.getDate();
+          if (dV < 0) {
+            mV--;
+            dV += 30;
+          }
+          mesesVacacion = Math.max(0, mV + (dV / 30));
+        }
+      }
+
+      let vacacion = (sbd * 15 * 1.3) * (mesesVacacion / 12);
+      if (document.getElementById('alojamiento').checked) vacacion *= 1.25;
+      if (document.getElementById('comida').checked) vacacion *= 1.25;
+
+      // --- 2. Aguinaldo proporcional (Arts. 196-202 CT) ---
+      const diasAguinaldo = anios < 3 ? 15 : (anios <= 10 ? 19 : 21);
+      let aguinaldo = 0;
+      let detalleAguinaldoStr = '';
+      let baseLegalAguinaldoPDF = 'Arts. 196-198 CT';
+
+      if (aguinaldoPagado === 'si') {
+        aguinaldo = 0;
+        detalleAguinaldoStr = 'Ya cancelado en el período correspondiente ($0.00)';
+        baseLegalAguinaldoPDF = 'Arts. 196-198 CT (Ya cancelado)';
+      } else {
+        let diasComputablesAguinaldo = 0;
+        let inicioPeriodoAguinaldo = null;
+
+        if (dTerminacion && dIngreso) {
+          const anioTerm = dTerminacion.getFullYear();
+          inicioPeriodoAguinaldo = new Date(anioTerm - 1, 11, 12); // 12 de diciembre del año previo
+
+          if (dTerminacion >= new Date(anioTerm, 11, 12)) {
+            inicioPeriodoAguinaldo = new Date(anioTerm, 11, 12);
+          }
+
+          if (dIngreso > inicioPeriodoAguinaldo) {
+            inicioPeriodoAguinaldo = dIngreso;
+          }
+
+          const msDiff = dTerminacion.getTime() - inicioPeriodoAguinaldo.getTime();
+          diasComputablesAguinaldo = Math.max(0, Math.round(msDiff / (1000 * 60 * 60 * 24)));
+        }
+
+        aguinaldo = diasComputablesAguinaldo > 0 
+          ? (sbd * diasAguinaldo) * (diasComputablesAguinaldo / 365)
+          : (sbd * diasAguinaldo) * (totalMeses / 12);
+
+        detalleAguinaldoStr = diasComputablesAguinaldo > 0
+          ? `Cómputo: ${diasComputablesAguinaldo} días laborados en el período (${diasAguinaldo} días base)`
+          : `Base legal: ${diasAguinaldo} días proporcionales`;
+
+        baseLegalAguinaldoPDF = diasComputablesAguinaldo > 0 
+          ? `Arts. 196-198 CT (${diasComputablesAguinaldo} días comp.)` 
+          : 'Arts. 196-198 CT';
+      }
+
+      document.getElementById('detalleAguinaldoTexto').textContent = detalleAguinaldoStr;
+
+      // --- 3. Indemnización / compensación ---
+      let indemnizacion = 0;
+      let avisoMsg = '';
+
+      if (tipo === 'despido') {
+        indemnizacion = sbdCap * 30 * (totalMeses / 12);
+        const minimo = sbdCap * 15;
+        indemnizacion = Math.max(indemnizacion, minimo);
+      } else {
+        if (aviso === 'no') {
+          avisoMsg = '⚠ No se otorgó preaviso por escrito: no aplica compensación económica.';
+          indemnizacion = 0;
+        } else {
+          indemnizacion = sbdCap * 15 * (totalMeses / 12);
+        }
+      }
+
+      // --- 4. Horas extras y recargos ---
+      const horaDiurna = sbd / 8;
+      const subtotalHED = horaDiurna * hed * 2;
+      const subtotalHEN = horaDiurna * hen * 2 * 1.25;
+      const montoAsueto = sbd * asueto * 2;
+      const montoDescanso = sbd * descanso * 1.5;
+
+      const totalBruto = vacacion + aguinaldo + indemnizacion +
+                         subtotalHED + subtotalHEN + montoAsueto + montoDescanso;
+
+      // --- 5. Deducciones de ley ---
+      const isss = Math.min(salario * 0.03, 30.00);
+      const afp = salario * 0.0725;
+
+      const baseRenta = Math.max(0, salario - isss - afp);
+      let isr = 0;
+      if (baseRenta > 472.00 && baseRenta <= 895.24) {
+        isr = ((baseRenta - 472.00) * 0.10) + 17.67;
+      } else if (baseRenta > 895.24 && baseRenta <= 2038.10) {
+        isr = ((baseRenta - 895.24) * 0.20) + 60.00;
+      } else if (baseRenta > 2038.10) {
+        isr = ((baseRenta - 2038.10) * 0.30) + 288.57;
+      }
+
+      const totalDeducciones = isss + afp + isr;
+      const totalNeto = totalBruto - totalDeducciones;
+
+      // Guardar objeto limpio para el PDF
+      datosCalculados = {
+        trabajador: document.getElementById('nombreTrabajador').value.trim() || 'Anónimo',
+        cargo: document.getElementById('cargo').value.trim() || 'No especificado',
+        dui: document.getElementById('dui').value.trim() || 'No especificado',
+        patrono: document.getElementById('patrono').value.trim() || 'No especificado (Opcional)',
+        salario: fmt(salario),
+        ingreso: formatearFechaDMY(document.getElementById('fechaIngreso').value),
+        terminacion: formatearFechaDMY(document.getElementById('fechaTerminacion').value),
+        antiguedad: document.getElementById('antiguedad').value,
+        tipoTexto: tipo === 'despido' ? 'Despido sin causa justificada' : 'Renuncia voluntaria',
+        baseLegalIndem: tipo === 'despido' ? 'Art. 58 CT (30 días/año)' : (aviso === 'no' ? 'Dec. 592 (Sin preaviso)' : 'Dec. 592 (15 días/año)'),
+        baseLegalAguinaldo: baseLegalAguinaldoPDF,
+        vacacion: fmt(vacacion),
+        aguinaldo: fmt(aguinaldo),
+        indemnizacion: fmt(indemnizacion),
+        hed: fmt(subtotalHED),
+        hen: fmt(subtotalHEN),
+        asueto: fmt(montoAsueto),
+        descanso: fmt(montoDescanso),
+        totalBruto: fmt(totalBruto),
+        isss: fmt(isss),
+        afp: fmt(afp),
+        isr: fmt(isr),
+        totalDeducciones: fmt(totalDeducciones),
+        totalNeto: fmt(totalNeto)
+      };
+
+      // Mostrar resultados en pantalla
+      document.getElementById('resVacacion').textContent = fmt(vacacion);
+      document.getElementById('resAguinaldo').textContent = fmt(aguinaldo);
+      document.getElementById('resIndemnizacion').textContent = fmt(indemnizacion);
+      document.getElementById('resHED').textContent = fmt(subtotalHED);
+      document.getElementById('resHEN').textContent = fmt(subtotalHEN);
+      document.getElementById('resAsueto').textContent = fmt(montoAsueto);
+      document.getElementById('resDescanso').textContent = fmt(montoDescanso);
+      document.getElementById('resTotalBruto').textContent = fmt(totalBruto);
+
+      document.getElementById('resISSS').textContent = '-' + fmt(isss);
+      document.getElementById('resAFP').textContent = '-' + fmt(afp);
+      document.getElementById('resISR').textContent = '-' + fmt(isr);
+      document.getElementById('resTotalDeducciones').textContent = '-' + fmt(totalDeducciones);
+      document.getElementById('resTotalNeto').textContent = fmt(totalNeto);
+
+      const avisoEl = document.getElementById('avisoMsg');
+      if (avisoMsg) {
+        avisoEl.textContent = avisoMsg;
+        avisoEl.classList.remove('hidden');
+      } else {
+        avisoEl.classList.add('hidden');
+      }
+
+      document.getElementById('resultados').style.display = 'block';
+    }
+
+    function descargarPDFDirecto() {
+      if (!datosCalculados) {
+        alert('Por favor realiza el cálculo antes de descargar el comprobante.');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+      const d = datosCalculados;
+
+      // Encabezado
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(15, 76, 129);
+      doc.text('COMPROBANTE DE LIQUIDACIÓN DE PRESTACIONES LABORALES', 40, 45);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text('República de El Salvador · Ministerio de Trabajo y Previsión Social', 40, 60);
+
+      // Línea divisoria
+      doc.setDrawColor(15, 76, 129);
+      doc.setLineWidth(1.5);
+      doc.line(40, 68, 572, 68);
+
+      let currentY = 85;
+
+      // I. Datos de las Partes
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 76, 129);
+      doc.text('I. DATOS DE LAS PARTES', 40, currentY);
+
+      doc.autoTable({
+        startY: currentY + 6,
+        margin: { left: 40, right: 40 },
+        theme: 'grid',
+        styles: { fontSize: 8.5, cellPadding: 4, textColor: [30, 30, 30] },
+        headStyles: { fillColor: [240, 244, 248], textColor: [15, 76, 129], fontStyle: 'bold' },
+        body: [
+          [
+            { content: 'Persona trabajadora:', fontStyle: 'bold' }, d.trabajador,
+            { content: 'Patrono / Empresa:', fontStyle: 'bold' }, d.patrono
+          ],
+          [
+            { content: 'Cargo desempeñado:', fontStyle: 'bold' }, d.cargo,
+            { content: 'Salario mensual:', fontStyle: 'bold' }, d.salario
+          ],
+          [
+            { content: 'Fecha de ingreso:', fontStyle: 'bold' }, d.ingreso,
+            { content: 'Fecha de terminación:', fontStyle: 'bold' }, d.terminacion
+          ],
+          [
+            { content: 'Antigüedad:', fontStyle: 'bold' }, d.antiguedad,
+            { content: 'Causa de terminación:', fontStyle: 'bold' }, d.tipoTexto
+          ]
+        ]
+      });
+
+      // II. Desglose de Prestaciones
+      currentY = doc.lastAutoTable.finalY + 16;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 76, 129);
+      doc.text('II. DESGLOSE DE PRESTACIONES LIQUIDADAS', 40, currentY);
+
+      doc.autoTable({
+        startY: currentY + 6,
+        margin: { left: 40, right: 40 },
+        theme: 'striped',
+        styles: { fontSize: 8.5, cellPadding: 3.5 },
+        headStyles: { fillColor: [15, 76, 129], textColor: [255, 255, 255], fontStyle: 'bold' },
+        head: [['Concepto', 'Base legal', { content: 'Monto', halign: 'right' }]],
+        body: [
+          ['Vacación proporcional', 'Arts. 177 y 187 CT', { content: d.vacacion, halign: 'right' }],
+          ['Aguinaldo proporcional', d.baseLegalAguinaldo, { content: d.aguinaldo, halign: 'right' }],
+          ['Indemnización / compensación', d.baseLegalIndem, { content: d.indemnizacion, halign: 'right' }],
+          ['Horas extras diurnas', 'Art. 169 CT', { content: d.hed, halign: 'right' }],
+          ['Horas extras nocturnas', 'Arts. 168 y 169 CT', { content: d.hen, halign: 'right' }],
+          ['Días de asueto laborados', 'Art. 192 CT', { content: d.asueto, halign: 'right' }],
+          ['Días de descanso semanal laborados', 'Arts. 175 y 176 CT', { content: d.descanso, halign: 'right' }],
+          [
+            { content: 'TOTAL DEVENGADO (BRUTO)', colSpan: 2, fontStyle: 'bold', styles: { fillColor: [230, 243, 235] } },
+            { content: d.totalBruto, fontStyle: 'bold', halign: 'right', styles: { fillColor: [230, 243, 235], textColor: [27, 122, 90] } }
+          ]
+        ]
+      });
+
+      // III. Deducciones de Ley y Neto a Pagar
+      currentY = doc.lastAutoTable.finalY + 16;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 76, 129);
+      doc.text('III. DEDUCCIONES DE LEY Y NETO A PAGAR', 40, currentY);
+
+      doc.autoTable({
+        startY: currentY + 6,
+        margin: { left: 40, right: 40 },
+        theme: 'striped',
+        styles: { fontSize: 8.5, cellPadding: 3.5 },
+        headStyles: { fillColor: [197, 48, 48], textColor: [255, 255, 255], fontStyle: 'bold' },
+        head: [['Concepto de retención', 'Base legal', { content: 'Monto', halign: 'right' }]],
+        body: [
+          ['Cotización ISSS (trabajador 3%)', 'Reglamento del ISSS, Art. 29', { content: '-' + d.isss, halign: 'right', styles: { textColor: [197, 48, 48] } }],
+          ['Cotización AFP (trabajador 7.25%)', 'Ley del SAP', { content: '-' + d.afp, halign: 'right', styles: { textColor: [197, 48, 48] } }],
+          ['Retención de ISR', 'Art. 37 Ley de ISR', { content: '-' + d.isr, halign: 'right', styles: { textColor: [197, 48, 48] } }],
+          [
+            { content: 'Total de deducciones', colSpan: 2, fontStyle: 'bold' },
+            { content: '-' + d.totalDeducciones, fontStyle: 'bold', halign: 'right', styles: { textColor: [197, 48, 48] } }
+          ],
+          [
+            { content: 'MONTO NETO A PAGAR', colSpan: 2, fontStyle: 'bold', styles: { fillColor: [240, 244, 248], fontSize: 9.5 } },
+            { content: d.totalNeto, fontStyle: 'bold', halign: 'right', styles: { fillColor: [240, 244, 248], fontSize: 9.5, textColor: [15, 76, 129] } }
+          ]
+        ]
+      });
+
+      // IV. Declaración y Firmas (Texto completamente limpio)
+      currentY = doc.lastAutoTable.finalY + 16;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 76, 129);
+      doc.text('IV. DECLARACIÓN Y CONFORMIDAD', 40, currentY);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(80);
+      const declaracion = 'La persona trabajadora declara haber recibido el detalle de las prestaciones económicas calculadas conforme a la legislación laboral salvadoreña, junto con las deducciones de ley practicadas y el monto neto resultante.';
+      const lineasDeclaracion = doc.splitTextToSize(declaracion, 532);
+      doc.text(lineasDeclaracion, 40, currentY + 12);
+
+      // Cajas de Firma
+      const yFirmas = currentY + 45;
+      doc.setDrawColor(80);
+      doc.setLineWidth(0.8);
+
+      // Firma Trabajador
+      doc.line(40, yFirmas, 260, yFirmas);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(30);
+      doc.text('Persona trabajadora', 40, yFirmas + 10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Nombre: ${d.trabajador}`, 40, yFirmas + 21);
+      doc.text(`DUI: ${d.dui}`, 40, yFirmas + 32);
+
+      // Firma Patrono
+      doc.line(350, yFirmas, 570, yFirmas);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Patrono o Representante Legal', 350, yFirmas + 10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Empresa: ${d.patrono}`, 350, yFirmas + 21);
+      doc.text('Firma / Sello: ___________________________', 350, yFirmas + 32);
+
+      // Advertencia Legal (Texto completamente limpio)
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(6.8);
+      doc.setTextColor(120);
+      const adv = 'Advertencia legal: Este documento es un comprobante informativo del cálculo de prestaciones y no constituye finiquito laboral. Conforme al Art. 402 del Código de Trabajo, la renuncia o el recibo de pago por despido solo tienen valor probatorio si constan en hojas extendidas por la Dirección General de Inspección de Trabajo, juzgados o ante notario público.';
+      const lineasAdv = doc.splitTextToSize(adv, 532);
+      doc.text(lineasAdv, 40, yFirmas + 50);
+
+      // Descarga inmediata del PDF
+      doc.save('Comprobante_Liquidacion.pdf');
+    }
+
+    document.getElementById('noAplica').addEventListener('change', function() {
+      const disabled = this.checked;
+      document.querySelectorAll('#jornadas input[type="number"]').forEach(i => i.disabled = disabled);
+    });
+
+    document.getElementById('fechaIngreso').addEventListener('change', calcularAntiguedad);
+    document.getElementById('fechaTerminacion').addEventListener('change', calcularAntiguedad);
+  </script>
+</body>
+</html>
